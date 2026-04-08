@@ -10,6 +10,10 @@ output "public_subnet_ids" {
   value = module.vpc.public_subnets
 }
 
-output "eks_cluster_name" {
-  value = module.eks.cluster_name
+output "alb_dns_name" {
+  value = aws_lb.app.dns_name
+}
+
+output "alb_url" {
+  value = "http://${aws_lb.app.dns_name}"
 }

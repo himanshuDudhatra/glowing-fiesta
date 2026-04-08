@@ -1,19 +1,78 @@
-# Terraform AWS EKS Deployment
+# Terraform AWS Infrastructure Deployment
 
 This project deploys:
 
 - 1 VPC
 - 2 public subnets + 2 private subnets
-- 1 EKS cluster
-- 1 managed node group with exactly 2 `m6a.large` nodes in private subnets only
+- 1 Application Load Balancer (ALB) in the public subnets
+- 1 Auto Scaling Group (ASG) using a Launch Template with `t3.medium` instance and container app in the private subnets
 
-## 1) Install Terraform
+## 1) Install Terraform (v1.14.8)
 
-macOS (Homebrew):
+> **Required version:** `1.14.8` — set in `versions.tf`. Using a different version will cause `terraform init` to fail.
+
+### macOS (Homebrew)
 
 ```bash
 brew tap hashicorp/tap
-brew install hashicorp/tap/terraform
+brew install hashicorp/tap/terraform@1.14.8
+terraform -version
+```
+
+> If a different version is already installed via Homebrew, run `brew unlink terraform && brew link terraform@1.14.8`.
+
+---
+
+### Ubuntu / Debian (apt)
+
+```bash
+# Install prerequisites
+sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
+
+# Add HashiCorp GPG key
+wget -O- https://apt.releases.hashicorp.com/gpg | \
+  gpg --dearmor | \
+  sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+
+# Add the HashiCorp Linux repository
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+  sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+# Install specific version
+sudo apt-get update && sudo apt-get install -y terraform=1.14.8-1
+
+# Verify
+terraform -version
+```
+
+---
+
+### Windows
+
+**Option 1 — Chocolatey (recommended):**
+
+```powershell
+choco install terraform --version=1.14.8
+terraform -version
+```
+
+**Option 2 — winget:**
+
+```powershell
+winget install --id Hashicorp.Terraform --version 1.14.8
+terraform -version
+```
+
+**Option 3 — Manual install:**
+
+1. Download the **1.14.8** Windows `.zip` from the [official Terraform releases page](https://releases.hashicorp.com/terraform/1.14.8/).
+2. Extract the `terraform.exe` binary to a directory of your choice (e.g. `C:\terraform`).
+3. Add that directory to your `PATH` environment variable:
+   - Search → *Edit the system environment variables* → **Environment Variables** → edit **Path** → **New** → paste the directory path.
+4. Open a new PowerShell / Command Prompt and verify:
+
+```powershell
 terraform -version
 ```
 
@@ -93,18 +152,8 @@ private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
 public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
 enable_nat_gateway = true
-enable_vpn_gateway = true
 
-eks_cluster_name       = "dev-eks"
-kubernetes_version     = "1.35"
-endpoint_public_access = true
-
-node_instance_types = ["m6a.large"]
-node_min_size       = 2
-node_max_size       = 2
-node_desired_size   = 2
-
-ami_type = "AL2023_x86_64_STANDARD"
+app_instance_type = "t3.medium"
 
 common_tags = {
   Environment = "dev"
@@ -126,17 +175,12 @@ Or one-step deployment:
 terraform apply -auto-approve
 ```
 
-## 7) Useful post-deploy command
-
-Update kubeconfig for the new cluster:
+One-step destroy:
 
 ```bash
-aws eks update-kubeconfig --name "$(terraform output -raw eks_cluster_name)" --region eu-west-1
+terraform destroy -auto-approve
 ```
 
-Then check nodes:
+# Justify The Architecture
 
-```bash
-kubectl get nodes
-```
-
+I chose this architecture because my application can be deployed on a simple EC2 setup using an Auto Scaling Group and Launch Template, attached to an ALB. It works fine, and there’s no need for a complex architecture. It’s also easy to understand
