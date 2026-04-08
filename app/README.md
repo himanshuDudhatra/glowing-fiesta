@@ -57,38 +57,3 @@ Test:
 ```bash
 curl http://localhost:3000/
 ```
-
-## Deploy to Kubernetes
-
-The repository includes `microservice.yml` with:
-- A `Deployment` named `simple-time-service`
-- A `ClusterIP` `Service` on port `3000`
-
-### 1) Push your image
-
-The manifest currently references:
-
-`himanshududhatra/simpletimeservice:latest`
-
-If you use a different image, update the `image` field in `microservice.yml` first.
-
-### 2) Apply manifests
-
-```bash
-kubectl apply -f microservice.yml
-```
-
-### 3) Verify rollout
-
-```bash
-kubectl get deploy simple-time-service
-kubectl get pods -l app=simple-time-service
-kubectl get svc simple-time-service
-```
-
-### 4) Test from your machine (port-forward)
-
-```bash
-kubectl port-forward svc/simple-time-service 3000:3000
-curl http://localhost:3000/
-```
